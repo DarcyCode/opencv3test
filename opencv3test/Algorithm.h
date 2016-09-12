@@ -48,86 +48,19 @@ void on_Mouse(int event, int x, int y, int flags, void *param);
 Mat colorDetect(Mat src, Vec3b minTh, Vec3b maxTh = Vec3b(255, 255, 255));
 Mat Get1ChannelMasks(Mat src, uchar minTh, uchar maxTh);
 
-//************************************
-// Method:    phaseCorr
-// FullName:  phaseCorr
-// Access:    public 
-// Returns:   Size
-// Qualifier:
-// Parameter: Mat src1
-// Parameter: Mat src2
-//************************************
+/*-------fourier-mellin transform-----------*/
 Point phaseCorr(const Mat& src1, const Mat& src2);
 
-//************************************
-// Method:    fft2
-// FullName:  fft2
-// Access:    public 
-// Returns:   cv::Mat
-// Qualifier:
-// Parameter: Mat & src
-// Parameter: int nonzerorows
-//************************************
 Mat fft2(const Mat& src, int nonzerorows);
-//************************************
-// Method:    shift2center
-// FullName:  shift2center
-// Access:    public 
-// Returns:   cv::Mat
-// Qualifier:
-// Parameter: Mat src
-//************************************
 Mat shift2center(const Mat& src);
-//************************************
-// Method:    highpass_filter
-// FullName:  highpass_filter
-// Access:    public 
-// Returns:   cv::Mat
-// Qualifier:
-// Parameter: int height
-// Parameter: int width
-//************************************
 Mat highpass_filter(int height, int width);
-
-//************************************
-// Method:    imrotate
-// FullName:  imrotate
-// Access:    public 
-// Returns:   bool
-// Qualifier:
-// Parameter: Mat img
-// Parameter: Mat & Res
-// Parameter: float angle
-//************************************
 bool imrotate(const Mat& img, Mat &Res, float angle);
 
-//************************************
-// Method:    getphaseCorrMaxval_loc
-// FullName:  getphaseCorrMaxval_loc
-// Access:    public 
-// Returns:   void
-// Qualifier:
-// Parameter: Mat _src1
-// Parameter: Mat _src2
-// Parameter: double * maxval
-// Parameter: Point * maxloc
-//************************************
 void getphaseCorrMaxval_loc(InputArray _src1, InputArray _src2, double& maxval, Point& maxloc);
 void magSpectrums( InputArray _src, OutputArray _dst);
 void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB);
 void fftShift(InputOutputArray _out);
-
-//************************************
-// Method:    LogPolarTrans
-// FullName:  LogPolarTrans
-// Access:    public 
-// Returns:   void
-// Qualifier:
-// Parameter: Mat src
-// Parameter: Mat & dst
-// Parameter: Point2f center
-// Parameter: int flags
-//************************************
+// flags is remap border type
 void LogPolarTrans(const Mat& src, Mat& dst, Point center, int flags);
 
 //************************************
@@ -262,6 +195,7 @@ void CCLSeedFill8C(const cv::Mat& _binImg, cv::Mat& _lableImg);
 //2013.4
 
 /*-----------连通域标号程序未来改写方向--------------
+-----------------2016/9/12 reprogram finished----------------
 * 1、拆分CCLabeling函数，先提取S、E和Index，为第一个函数
 * 2、根据三个结果进行标号和确定需要提取的特征，一般以图像矩表示
 * 特征公式参见《快速连通域分析算法及其实现_孔斌》一文
@@ -302,10 +236,9 @@ void InitFeature(FEATURES &feature);
 // update features by type
 void Add2Features(FEATURES &feature1, const FEATURES &feature2, int type);
 void Add2Features(FEATURES &feature1, const Run_length &runlength, int width, int type);
-
+// statistical features of connected components
 long StatFeatureInfo(uchar *image, int Height, int Width, int type, bool backfill = true);
-void StatFeatureInfo(InputOutputArray _src, vector<FEATURES> &Features, int type, bool backfill = true);
-
+long StatFeatureInfo(InputOutputArray _src, vector<FEATURES> &Features, int type, bool backfill = true);
 void StatFeatureInfoDemo();
 
 // 查找根标号的位置
@@ -320,7 +253,7 @@ long unionDCBs(vector<long> &labels, long pos1, long pos2);
 long unionDCBs(FEATURES *labels, long pos1, long pos2);
 long unionDCBs(vector<FEATURES> &labels, long pos1, long pos2);
 
-// 版本3：纯数组DCB并查集
+// 纯数组DCB并查集
 // 背景色为0
 // image:按行存储的一维图像，每行最后列加一字节存背景
 long CCLabeling(unsigned char image[], long width, long height, bool backfill = true);
@@ -331,8 +264,24 @@ void CCLabeling(Mat &image, vector<long> &rStart, vector<long> &rEnd, vector<lon
 void CCLabelingDemo();
 
 // select regions whose area larger than threshold
-enum {REGION_SELECT_AREA = 0, REGION_SELECT_WIDTH, REGION_SELECT_HEIGHT};
+enum 
+{
+	REGION_SELECT_AREA = 1, 
+	REGION_SELECT_WIDTH = 2, 
+	REGION_SELECT_HEIGHT = 4, 
+	REGION_SELECT_WIDTH_DIV_HEIGHT = 8
+};
+// use vector edition of CCLabeling.
+// In release mode, array&vector editions have the same performance, 
+// but vector edition is more safer
 void SelectRegion(const Mat& src, Mat &dst, vector<Mat> &Regions, int type, const Scalar& minThresh, const Scalar &maxThresh);
+// set Feature.label=0 if out of [minThresh, maxThresh]
+void RefineFeatureByArea(vector<FEATURES> &Feature, double minThresh, double maxThresh);
+void RefineFeatureByWidth(vector<FEATURES> &Feature, double minThresh, double maxThresh);
+void RefineFeatureByHeight(vector<FEATURES> &Feature, double minThresh, double maxThresh);
+void RefineFeatureByW_DIV_H(vector<FEATURES> &Feature, double minThresh, double maxThresh);
+// the same function with SelectRegion, use the SataFeatureInfo
+void SelectShape(InputArray _src, OutputArray _dst, vector<Mat> &Regions, int type, const Scalar& minThresh, const Scalar &maxThresh);
+// demo
 void SelectRegionDemo();
-
-// closing-circle
+void SelectShapeDemo();

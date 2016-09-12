@@ -2103,6 +2103,7 @@ void ExtractRunlength(InputArray _src, vector<Run_length> &runlength)
 
 void InitFeature(FEATURES &feature)
 {
+	feature.label = 0;
 	feature.bottom = 0;
 	feature.left = 9999;
 	feature.nPixelCnt = 0;
@@ -2122,7 +2123,6 @@ void InitFeature(FEATURES &feature)
 
 void Add2Features(FEATURES &feature1, const FEATURES &feature2, int type)
 {
-	
 	switch(type)
 	{
 	case REGION_SELECT_AREA:
@@ -2131,10 +2131,16 @@ void Add2Features(FEATURES &feature1, const FEATURES &feature2, int type)
 		break;
 	// compare top&bottom of feature1&feature2
 	case REGION_SELECT_HEIGHT:
-		feature1.top=feature1.top<feature2.top?feature1.top:feature2.top;
-		feature1.bottom=feature1.bottom>feature2.bottom?feature1.bottom:feature2.bottom;
+		feature1.top=min(feature1.top, feature2.top);
+		feature1.bottom=max(feature1.bottom, feature2.bottom);
 		break;
 	case REGION_SELECT_WIDTH:
+		feature1.left=feature1.left<feature2.left?feature1.left:feature2.left;
+		feature1.right=feature1.right>feature2.right?feature1.right:feature2.right;
+		break;
+	case REGION_SELECT_WIDTH_DIV_HEIGHT:
+		feature1.top=feature1.top<feature2.top?feature1.top:feature2.top;
+		feature1.bottom=feature1.bottom>feature2.bottom?feature1.bottom:feature2.bottom;
 		feature1.left=feature1.left<feature2.left?feature1.left:feature2.left;
 		feature1.right=feature1.right>feature2.right?feature1.right:feature2.right;
 		break;
@@ -2163,6 +2169,15 @@ void Add2Features(FEATURES &feature1, const Run_length &runlength, int width, in
 		a = runlength.E%width;
 		feature1.right=feature1.right>a?feature1.right:a;
 		break;
+	case REGION_SELECT_WIDTH_DIV_HEIGHT:
+		a = runlength.S/width;
+		feature1.top=feature1.top<a?feature1.top:a;
+		feature1.bottom=feature1.bottom>a?feature1.bottom:a;
+		a = runlength.S%width;
+		feature1.left=feature1.left<a?feature1.left:a;
+		a = runlength.E%width;
+		feature1.right=feature1.right>a?feature1.right:a;
+		break;
 	default:
 		break;
 	}
@@ -2179,7 +2194,7 @@ long StatFeatureInfo(uchar *image, int Height, int Width, int type, bool backfil
 
 	Run_length *runlength = new Run_length[runSize];
 	runCnt = ExtractRunlength(image, pixelCount, runlength);
-	FEATURES *Features = new FEATURES[runSize];
+	FEATURES *Features = new FEATURES[runCnt];
 
 	long  n=0, l=1, j=0;                       //l:标号从1开始，以免0与背景色0重复
 	//
@@ -2191,7 +2206,7 @@ long StatFeatureInfo(uchar *image, int Height, int Width, int type, bool backfil
 
 		if (runlength[j].E <= runlength[n].E-N)//if(E[j] <= E[n]-N)       //rj在rn之前结束
 		{
-			Add2Features(Features[runlength[j].rIndex], runlength[n], Width, type);
+			Add2Features(Features[runlength[j].rIndex], runlength[n], N, type);
 			runlength[n].rIndex = runlength[j].rIndex;
 			t=j;
 			j++;
@@ -2212,16 +2227,16 @@ long StatFeatureInfo(uchar *image, int Height, int Width, int type, bool backfil
 		{
 			if(runlength[j].S <= runlength[n].E-N+1)//if(S[j] <= E[n]-N+1)    //u<=e-N?
 			{
-				Add2Features(Features[runlength[j].rIndex], runlength[n], Width, type);
+				Add2Features(Features[runlength[j].rIndex], runlength[n], N, type);
 				runlength[n].rIndex = runlength[j].rIndex;
 			}
 			else
 			{
 				runlength[n].rIndex = l;
+				InitFeature(Features[l]);
 				Features[l].label = l;
 				// Features[l].nPixelCnt = 0;
-				InitFeature(Features[l]);
-				Add2Features(Features[l], runlength[n], Width, type);
+				Add2Features(Features[l], runlength[n], N, type);
 				l++;
 			}
 		}
@@ -2244,7 +2259,7 @@ long StatFeatureInfo(uchar *image, int Height, int Width, int type, bool backfil
 // 			cout << i << " ";
 // 			cout << Features[i].label;
 // 			cout << " ";
-// 			cout << Features[i].bottom - Features[i].top+1 << endl;
+// 			cout << Features[i].right - Features[i].left+1 << endl;
 // 		}
 // 	}
 	//不回填时，label存放的就是各连通分支的标号
@@ -2264,9 +2279,104 @@ long StatFeatureInfo(uchar *image, int Height, int Width, int type, bool backfil
 	return cComponentCount;   //返回连通域个数
 }
 
-void StatFeatureInfo(InputOutputArray _src, vector<FEATURES> &Features, int type, bool backfill/* = true*/)
+long StatFeatureInfo(InputOutputArray _src, vector<FEATURES> &Features, int type, bool backfill/* = true*/)
 {
+	Mat src = _src.getMat();
+	long M = src.rows, N = src.cols;
 
+	long runSize = M/2 * N+1;
+	
+	long t, runCnt;
+	vector<Run_length> runlength; 
+	ExtractRunlength(src, runlength);
+	runCnt = runlength.size();
+	FEATURES feature;
+	InitFeature(feature);
+	Features.push_back(feature);
+
+	long  n=0, l=1, j=0;                       //l:标号从1开始，以免0与背景色0重复
+	//
+	for(n=0; n<runCnt; n++)
+	{
+
+		while(runlength[j].E < runlength[n].S-N-1)   //第一个v>=s-N的j
+			j++;
+
+		if (runlength[j].E <= runlength[n].E-N)//if(E[j] <= E[n]-N)       //rj在rn之前结束
+		{
+			Add2Features(Features[runlength[j].rIndex], runlength[n], N, type);
+			runlength[n].rIndex = runlength[j].rIndex;
+			t=j;
+			j++;
+			while(runlength[j].E <= runlength[n].E-N)// while(E[j] <= E[n]-N)
+			{
+				Add2Features(Features[runlength[t].rIndex], Features[runlength[j].rIndex], type);
+				unionDCBs(Features, runlength[t].rIndex, runlength[j].rIndex);
+				j++;
+			}
+
+			if(runlength[j].S <= runlength[n].E-N+1)//if(S[j] <= E[n]-N+1)
+			{
+				Add2Features(Features[runlength[t].rIndex], Features[runlength[j].rIndex], type);
+				unionDCBs(Features, runlength[t].rIndex, runlength[j].rIndex);
+			}
+		}
+		else
+		{
+			if(runlength[j].S <= runlength[n].E-N+1)//if(S[j] <= E[n]-N+1)    //u<=e-N?
+			{
+				Add2Features(Features[runlength[j].rIndex], runlength[n], N, type);
+				runlength[n].rIndex = runlength[j].rIndex;
+			}
+			else
+			{
+				runlength[n].rIndex = l;
+				InitFeature(feature);
+				feature.label = l;
+				// Features[l].nPixelCnt = 0;
+				Add2Features(feature, runlength[n], N, type);
+				Features.push_back(feature);
+				l++;
+			}
+		}
+	}
+
+	long cComponentCount = 0;
+	long k, c0, x;
+	for(k=1; k<l; ++k)             //更新所有等价分支的标号
+	{
+		if(Features[k].label == k)
+			++cComponentCount;
+		else
+			Features[k].label = Features[findRootIndex(Features, Features[k].label)].label;
+	}
+	//code for test
+	 	for (int i = 1; i < l; i++)
+	 	{
+	 		if (Features[i].label == i)
+	 		{
+	 			cout << i << " ";
+	 			cout << Features[i].label;
+	 			cout << " ";
+//				cout << Features[i].nPixelCnt << endl;
+//	 			cout << Features[i].right - Features[i].left+1 << endl;
+				cout << Features[i].bottom - Features[i].top+1 << endl;
+	 		}
+	 	}
+	//不回填时，label存放的就是各连通分支的标号
+	//回填到图像，使每个像素得到其标号值
+	//	long runCount = n;
+	if(backfill)
+	{
+		uchar *image = src.data;
+		for(k=0; k<runCnt; k++)
+		{
+			c0 = Features[runlength[k].rIndex].label;
+			for(x=runlength[k].S; x<=runlength[k].E; x++)
+				image[x] = c0;
+		}
+	}
+	return cComponentCount;   //返回连通域个数
 }
 
 void StatFeatureInfoDemo()
@@ -2280,9 +2390,9 @@ void StatFeatureInfoDemo()
 	Mat img2 = img1.clone();
 	uchar *pimg = img1.ptr<uchar>(0);
 	long cnt;
-	cnt = StatFeatureInfo(pimg, img1.rows, img1.cols, REGION_SELECT_HEIGHT, true);
-	//	cnt = CCLabeling(pimg, img1.cols, img.rows, true);
-//	CCLabeling(img1, Start, End, label, index, cnt);
+//	cnt = StatFeatureInfo(pimg, img1.rows, img1.cols, REGION_SELECT_WIDTH, true);
+	vector<FEATURES> Feature;
+	cnt = StatFeatureInfo(img1, Feature, REGION_SELECT_HEIGHT, true);
 	t = cv::getTickCount() - t;
 	cout << t*1000/getTickFrequency() << "ms" << endl;
 	cout << cnt << endl;
@@ -2740,5 +2850,124 @@ void SelectRegionDemo()
 	cout << t*1000/getTickFrequency() << "ms" << endl;
 	imshow("before", bw*255);
 	imshow("after", (img)*255);
+	waitKey(0);
+}
+
+void SelectShape(InputArray _src, OutputArray _dst, vector<Mat> &Regions, int type, const Scalar& minThresh, const Scalar &maxThresh)
+{
+	Mat src = _src.getMat();
+	// add a column in the right of image
+	_dst.create(src.rows, src.cols+1, CV_8U);
+	Mat dst = _dst.getMat();
+	copyMakeBorder(src, dst, 0, 0, 0, 1, BORDER_CONSTANT, 0);
+	vector<FEATURES> Feature;
+	StatFeatureInfo(dst, Feature, type, true);
+	switch(type)
+	{
+	case REGION_SELECT_AREA:
+		RefineFeatureByArea(Feature, minThresh[0], maxThresh[0]);
+		break;
+	case REGION_SELECT_WIDTH:
+		RefineFeatureByWidth(Feature, minThresh[0], maxThresh[0]);
+		break;
+	case REGION_SELECT_HEIGHT:
+		RefineFeatureByHeight(Feature, minThresh[0], maxThresh[0]);
+		break;
+	case REGION_SELECT_WIDTH_DIV_HEIGHT:
+		RefineFeatureByW_DIV_H(Feature, minThresh[0], maxThresh[0]);
+		break;
+	default:
+		break;
+	}
+	// pop the right column of dst
+	dst = dst.t();
+	dst.pop_back();
+	dst = dst.t();
+	for (int i = 1; i < Feature.size(); i++)
+	{
+		if (Feature[i].label == i)
+		{
+			Regions.push_back(dst == i);
+		}
+	}
+	_dst.create(dst.size(),CV_8U);
+	dst = _dst.getMat();
+	dst.setTo(0);
+	for (int i = 0; i < Regions.size(); i++)
+	{
+		dst += Regions[i];
+	}
+}
+
+void RefineFeatureByArea(vector<FEATURES> &Feature, double minThresh, double maxThresh)
+{
+	for (int i = 0; i < Feature.size(); i++)
+	{
+		if (Feature[i].label==i)
+		{
+			long Area = Feature[i].nPixelCnt;
+			if (Area<minThresh||Area>maxThresh)
+				Feature[i].label = 0;
+		}
+	}
+}
+
+void RefineFeatureByWidth(vector<FEATURES> &Feature, double minThresh, double maxThresh)
+{
+	for (int i = 0; i < Feature.size(); i++)
+	{
+		if (Feature[i].label==i)
+		{
+			int Width = Feature[i].right-Feature[i].left+1;
+			if (Width<minThresh||Width>maxThresh)
+				Feature[i].label = 0;
+		}
+	}
+}
+
+void RefineFeatureByHeight(vector<FEATURES> &Feature, double minThresh, double maxThresh)
+{
+	for (int i = 0; i < Feature.size(); i++)
+	{
+		if (Feature[i].label==i)
+		{
+			int Height = Feature[i].bottom-Feature[i].top+1;
+			if (Height<minThresh||Height>maxThresh)
+				Feature[i].label = 0;
+		}
+	}
+}
+
+void RefineFeatureByW_DIV_H(vector<FEATURES> &Feature, double minThresh, double maxThresh)
+{
+	for (int i = 0; i < Feature.size(); i++)
+	{
+		if (Feature[i].label==i)
+		{
+			int Width = Feature[i].right-Feature[i].left+1; 
+			int Height = Feature[i].bottom-Feature[i].top+1;
+			double rate = Width*1./Height;
+			if (rate<minThresh||rate>maxThresh)
+				Feature[i].label = 0;
+		}
+	}
+}
+
+void SelectShapeDemo()
+{
+	Mat img = imread("D:/images/test1.tif",0);
+	Mat bw;
+	threshold(img, bw, 100, 1, THRESH_OTSU+THRESH_BINARY);
+	double t = cv::getTickCount();
+	vector<Mat> regions;
+	//	for (int i = 0; i < 1000; i++)
+	{
+		regions.clear();
+		SelectShape(bw, img, regions, REGION_SELECT_WIDTH_DIV_HEIGHT, 0,2);
+	}
+	t = cv::getTickCount() - t;
+	cout << t*1000/getTickFrequency() << "ms" << endl;
+	imshow("before", bw*255);
+	imshow("after", (img));
 	waitKey(0);
 }

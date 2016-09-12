@@ -19,4 +19,5 @@ int main()
 //	FastHazeRemovalDemo();
 //	CylinderExpansionTest();
 	StatFeatureInfoDemo();
+//	SelectShapeDemo();
 }
