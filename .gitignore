@@ -1,0 +1,9 @@
+Debug
+Release
+ipch
+*.xml
+opencv3test.*
+*.bmp
+*.yml
+opencv3test/codeforread.cpp
+opencv3test/main1.cpp
