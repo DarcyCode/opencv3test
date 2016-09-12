@@ -14,9 +14,9 @@ int main()
 {
 //	ConnComponetLabelDemo();
 //	CCLabelingDemo();
-	SelectRegionDemo();
+//	SelectRegionDemo();
 //	FMTmatchDemo();
 //	FastHazeRemovalDemo();
 //	CylinderExpansionTest();
-//	StatFeatureInfoDemo();
+	StatFeatureInfoDemo();
 }
