@@ -18,6 +18,6 @@ int main()
 //	FMTmatchDemo();
 //	FastHazeRemovalDemo();
 //	CylinderExpansionTest();
-	StatFeatureInfoDemo();
-//	SelectShapeDemo();
+//	StatFeatureInfoDemo();
+	SelectShapeDemo();
 }

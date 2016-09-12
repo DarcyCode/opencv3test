@@ -2135,14 +2135,14 @@ void Add2Features(FEATURES &feature1, const FEATURES &feature2, int type)
 		feature1.bottom=max(feature1.bottom, feature2.bottom);
 		break;
 	case REGION_SELECT_WIDTH:
-		feature1.left=feature1.left<feature2.left?feature1.left:feature2.left;
-		feature1.right=feature1.right>feature2.right?feature1.right:feature2.right;
+		feature1.left=min(feature1.left, feature2.left);
+		feature1.right=max(feature1.right, feature2.right);
 		break;
 	case REGION_SELECT_WIDTH_DIV_HEIGHT:
-		feature1.top=feature1.top<feature2.top?feature1.top:feature2.top;
-		feature1.bottom=feature1.bottom>feature2.bottom?feature1.bottom:feature2.bottom;
-		feature1.left=feature1.left<feature2.left?feature1.left:feature2.left;
-		feature1.right=feature1.right>feature2.right?feature1.right:feature2.right;
+		feature1.top=min(feature1.top, feature2.top);
+		feature1.bottom=max(feature1.bottom, feature2.bottom);
+		feature1.left=min(feature1.left, feature2.left);
+		feature1.right=max(feature1.right, feature2.right);
 		break;
 	default:
 		break;
@@ -2159,24 +2159,18 @@ void Add2Features(FEATURES &feature1, const Run_length &runlength, int width, in
 		break;
 		// new runlength is at the bottom of connected component
 	case REGION_SELECT_HEIGHT:
-		a = runlength.S/width;
-		feature1.top=feature1.top<a?feature1.top:a;
-		feature1.bottom=feature1.bottom>a?feature1.bottom:a;
+		feature1.top=min(feature1.top, int(runlength.S/width));
+		feature1.bottom=max(feature1.bottom, int(runlength.S/width));
 		break;
 	case REGION_SELECT_WIDTH:
-		a = runlength.S%width;
-		feature1.left=feature1.left<a?feature1.left:a;
-		a = runlength.E%width;
-		feature1.right=feature1.right>a?feature1.right:a;
+		feature1.left=min(feature1.left, int(runlength.S%width));
+		feature1.right=max(feature1.right, int(runlength.E%width));
 		break;
 	case REGION_SELECT_WIDTH_DIV_HEIGHT:
-		a = runlength.S/width;
-		feature1.top=feature1.top<a?feature1.top:a;
-		feature1.bottom=feature1.bottom>a?feature1.bottom:a;
-		a = runlength.S%width;
-		feature1.left=feature1.left<a?feature1.left:a;
-		a = runlength.E%width;
-		feature1.right=feature1.right>a?feature1.right:a;
+		feature1.top=min(feature1.top, int(runlength.S/width));
+		feature1.bottom=max(feature1.bottom, int(runlength.S/width));
+		feature1.left=min(feature1.left, int(runlength.S%width));
+		feature1.right=max(feature1.right, int(runlength.E%width));
 		break;
 	default:
 		break;
@@ -2351,18 +2345,18 @@ long StatFeatureInfo(InputOutputArray _src, vector<FEATURES> &Features, int type
 			Features[k].label = Features[findRootIndex(Features, Features[k].label)].label;
 	}
 	//code for test
-	 	for (int i = 1; i < l; i++)
-	 	{
-	 		if (Features[i].label == i)
-	 		{
-	 			cout << i << " ";
-	 			cout << Features[i].label;
-	 			cout << " ";
-//				cout << Features[i].nPixelCnt << endl;
-//	 			cout << Features[i].right - Features[i].left+1 << endl;
-				cout << Features[i].bottom - Features[i].top+1 << endl;
-	 		}
-	 	}
+// 	 	for (int i = 1; i < l; i++)
+// 	 	{
+// 	 		if (Features[i].label == i)
+// 	 		{
+// 	 			cout << i << " ";
+// 	 			cout << Features[i].label;
+// 	 			cout << " ";
+// 				cout << Features[i].nPixelCnt << endl;
+// 	 			cout << Features[i].right - Features[i].left+1 << " ";
+// 				cout << Features[i].bottom - Features[i].top+1 << endl;
+// 	 		}
+// 	 	}
 	//不回填时，label存放的就是各连通分支的标号
 	//回填到图像，使每个像素得到其标号值
 	//	long runCount = n;
@@ -2392,7 +2386,7 @@ void StatFeatureInfoDemo()
 	long cnt;
 //	cnt = StatFeatureInfo(pimg, img1.rows, img1.cols, REGION_SELECT_WIDTH, true);
 	vector<FEATURES> Feature;
-	cnt = StatFeatureInfo(img1, Feature, REGION_SELECT_HEIGHT, true);
+	cnt = StatFeatureInfo(img1, Feature, REGION_SELECT_WIDTH_DIV_HEIGHT, true);
 	t = cv::getTickCount() - t;
 	cout << t*1000/getTickFrequency() << "ms" << endl;
 	cout << cnt << endl;
