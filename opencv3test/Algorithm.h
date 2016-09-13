@@ -12,13 +12,57 @@ using namespace cv;
 using namespace std;
 
 /*-------fourier-mellin transform-----------*/
+//************************************
+// Method:    phase-correlation match algorithm, calculate offset of two corrletated images
+// FullName:  phaseCorr
+// Access:    public 
+// Returns:   Point, offset of src1&src2
+// Qualifier:
+// Parameter: const Mat & src1
+// Parameter: const Mat & src2
+//************************************
 Point phaseCorr(const Mat& src1, const Mat& src2);
-
+//************************************
+// Method:    2-D fourier transform
+// FullName:  fft2
+// Access:    public 
+// Returns:   cv::Mat
+// Qualifier:
+// Parameter: const Mat & src
+// Parameter: int nonzerorows, speed-up setting, ignore zero rows
+//************************************
 Mat fft2(const Mat& src, int nonzerorows);
+//************************************
+// Method:    shift 2-D fourier transform result to image center
+// FullName:  shift2center
+// Access:    public 
+// Returns:   cv::Mat
+// Qualifier:
+// Parameter: const Mat & src
+//************************************
 Mat shift2center(const Mat& src);
+//************************************
+// Method:    create high-pass filter by height&width
+// FullName:  highpass_filter
+// Access:    public 
+// Returns:   cv::Mat
+// Qualifier:
+// Parameter: int height
+// Parameter: int width
+//************************************
 Mat highpass_filter(int height, int width);
+//************************************
+// Method:    rotate src to res by angle in degree,
+//			  positive values mean counter-clockwise rotation
+// FullName:  imrotate
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: const Mat & img
+// Parameter: Mat & Res
+// Parameter: float angle
+//************************************
 bool imrotate(const Mat& img, Mat &Res, float angle);
-
 void getphaseCorrMaxval_loc(InputArray _src1, InputArray _src2, double& maxval, Point& maxloc);
 void magSpectrums( InputArray _src, OutputArray _dst);
 void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int flags, bool conjB);
