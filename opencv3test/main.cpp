@@ -12,12 +12,8 @@ int matsize(vector<Mat>& vm)
 RNG rng( 12345);
 int main()
 {
-//	ConnComponetLabelDemo();
-//	CCLabelingDemo();
-//	SelectRegionDemo();
 //	FMTmatchDemo();
 //	FastHazeRemovalDemo();
-//	CylinderExpansionTest();
 //	StatFeatureInfoDemo();
 	SelectShapeDemo();
 }
