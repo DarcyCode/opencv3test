@@ -947,14 +947,14 @@ cv::Mat CreatTable( float invA )
     uchar *ptr;
     for(int i = 0; i < 256; i++)
     {
-	ptr = res.ptr<uchar>(i);
-	for(int j = 0; j < 256; j++)
-	{
-	    double val = (i - j) / (1.0 - j*invA);
-	    val = val > 255?255:val;
-	    val = val < 0?0:val;
-	    ptr[j] = static_cast<uchar>(val);
-	}
+		ptr = res.ptr<uchar>(i);
+		for(int j = 0; j < 256; j++)
+		{
+			double val = (i - j) / (1.0 - j*invA);
+			val = val > 255?255:val;
+			val = val < 0?0:val;
+			ptr[j] = static_cast<uchar>(val);
+		}
     }
     return res;
 }
@@ -1122,7 +1122,7 @@ void ShapeAngleCircles(Mat src, vector<vector<Point>>& circles, double threshold
 	}
 }
 
-void CalCirclePara(vector<vector<Point>> circles, vector<Point>& centers, vector<int>& radius)
+void CalCirclePara(const vector<vector<Point>> &circles, vector<Point>& centers, vector<int>& radius)
 {
 	centers.clear();
 	radius.clear();
@@ -1231,25 +1231,6 @@ void DrawLabelImage(const Mat& _labelImg, Mat& _colorLabelImg)
 	}
 }
 
-long ExtractRunlength(uchar *imagedata, const long &PixelCount, Run_length *runlength)
-{
-	long i, n = 0;
-	for(i=0; i<PixelCount; i++)
-	{
-		if(imagedata[i])
-		{
-			runlength[n].S = i;
-			i++;
-			while(imagedata[i])
-				i++;
-			runlength[n].E = i-1;
-			runlength[n].rIndex = n;
-			n++;
-		}
-	}
-	return n;
-}
-
 void ExtractRunlength(InputArray _src, vector<Run_length> &runlength)
 {
 	Mat src = _src.getMat();
@@ -1348,102 +1329,6 @@ void Add2Features(FEATURES &feature1, const Run_length &runlength, int width, in
 	default:
 		break;
 	}
-}
-
-long StatFeatureInfo(uchar *image, int Height, int Width, int type, bool backfill/* = true*/)
-{
-	long M = Height, N = Width;
-
-	long pixelCount = M * N;
-	long runSize = M/2 * N+1;
-
-	long t, runCnt;
-
-	Run_length *runlength = new Run_length[runSize];
-	runCnt = ExtractRunlength(image, pixelCount, runlength);
-	FEATURES *Features = new FEATURES[runCnt];
-
-	long  n=0, l=1, j=0;                       //l:标号从1开始，以免0与背景色0重复
-	//
-	for(n=0; n<runCnt; n++)
-	{
-
-		while(runlength[j].E < runlength[n].S-N-1)   //第一个v>=s-N的j
-			j++;
-
-		if (runlength[j].E <= runlength[n].E-N)//if(E[j] <= E[n]-N)       //rj在rn之前结束
-		{
-			Add2Features(Features[runlength[j].rIndex], runlength[n], N, type);
-			runlength[n].rIndex = runlength[j].rIndex;
-			t=j;
-			j++;
-			while(runlength[j].E <= runlength[n].E-N)// while(E[j] <= E[n]-N)
-			{
-				Add2Features(Features[runlength[t].rIndex], Features[runlength[j].rIndex], type);
-				unionDCBs(Features, runlength[t].rIndex, runlength[j].rIndex);
-				j++;
-			}
-
-			if(runlength[j].S <= runlength[n].E-N+1)//if(S[j] <= E[n]-N+1)
-			{
-				Add2Features(Features[runlength[t].rIndex], Features[runlength[j].rIndex], type);
-				unionDCBs(Features, runlength[t].rIndex, runlength[j].rIndex);
-			}
-		}
-		else
-		{
-			if(runlength[j].S <= runlength[n].E-N+1)//if(S[j] <= E[n]-N+1)    //u<=e-N?
-			{
-				Add2Features(Features[runlength[j].rIndex], runlength[n], N, type);
-				runlength[n].rIndex = runlength[j].rIndex;
-			}
-			else
-			{
-				runlength[n].rIndex = l;
-				InitFeature(Features[l]);
-				Features[l].label = l;
-				// Features[l].nPixelCnt = 0;
-				Add2Features(Features[l], runlength[n], N, type);
-				l++;
-			}
-		}
-	}
-
-	long cComponentCount = 0;
-	long k, c0, x;
-	for(k=1; k<l; ++k)             //更新所有等价分支的标号
-	{
-		if(Features[k].label != k)
-			Features[k].label = Features[findRootIndex(Features, Features[k].label)].label;
-		else
-			++cComponentCount;
-	}
-	//code for test
-// 	for (int i = 0; i < l; i++)
-// 	{
-// 		if (Features[i].label == i)
-// 		{
-// 			cout << i << " ";
-// 			cout << Features[i].label;
-// 			cout << " ";
-// 			cout << Features[i].right - Features[i].left+1 << endl;
-// 		}
-// 	}
-	//不回填时，label存放的就是各连通分支的标号
-	//回填到图像，使每个像素得到其标号值
-//	long runCount = n;
-	if(backfill)
-	{
-		for(k=0; k<runCnt; k++)
-		{
-			c0 = Features[runlength[k].rIndex].label;
-			for(x=runlength[k].S; x<=runlength[k].E; x++)
-				image[x] = c0;
-		}
-	}
-	delete[] runlength;
-	delete[] Features;
-	return cComponentCount;   //返回连通域个数
 }
 
 long StatFeatureInfo(InputOutputArray _src, vector<FEATURES> &Features, int type, bool backfill/* = true*/)
@@ -1570,17 +1455,6 @@ void StatFeatureInfoDemo()
 	waitKey(0);
 }
 
-long findRootIndex(FEATURES* labels, long position)
-{
-	//递归版本
-	if(labels[position].label != position)
-	{
-		labels[position].label = findRootIndex(labels, labels[position].label);
-		return labels[position].label;
-	}
-	return position;
-}
-
 long findRootIndex(vector<FEATURES> &labels, long position)
 {
 	//递归版本
@@ -1590,19 +1464,6 @@ long findRootIndex(vector<FEATURES> &labels, long position)
 		return labels[position].label;
 	}
 	return position;
-}
-
-long unionDCBs(FEATURES *labels, long pos1, long pos2)
-{
-	long x = findRootIndex(labels, pos1);
-	long y = findRootIndex(labels, pos2);
-
-	if(x == y)
-		return  x;
-	// labels will be unioned, so ensuring the same connected 
-	// component has only one label is enough
-	labels[y].label = x;
-	return  x;
 }
 
 long unionDCBs(vector<FEATURES> &labels, long pos1, long pos2)
