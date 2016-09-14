@@ -5,25 +5,31 @@ Point phaseCorr(const Mat& src1, const Mat& src2)
 	// size of two images must be the same
 	CV_Assert(src1.size() == src2.size());
 	Mat padded1,padded2;
+	// get the best size of dft
 	int m = getOptimalDFTSize(src1.rows);
 	int n = getOptimalDFTSize(src1.cols);
+	// copy image to padded that have the best dft size
 	copyMakeBorder(src1, padded1, 0, m-src1.rows, 0, n-src1.cols, BORDER_CONSTANT, Scalar::all(0));
 	copyMakeBorder(src2, padded2, 0, m-src2.rows, 0, n-src2.cols, BORDER_CONSTANT, Scalar::all(0));
-
+	// create 2-channel matrix to store dft complex result
 	Mat planes1[] = {Mat_<float>(padded1), Mat::zeros(padded1.size(), CV_32F)};
 	Mat planes2[] = {Mat_<float>(padded2), Mat::zeros(padded2.size(), CV_32F)};
 	Mat complexI1, complexI2;
 	merge(planes1, 2, complexI1);
 	merge(planes2, 2, complexI2);
+	// excute dft
 	dft(complexI1, complexI1);
 	dft(complexI2, complexI2);
+	// split real part and imag part
 	split(complexI1, planes1);
 	split(complexI2, planes2);
+	// get phase of dft result
 	phase(planes1[0], planes1[1], planes1[0]);
 	phase(planes2[0], planes2[1], planes2[0]);
+	// extract phase-diff
 	Mat angle = planes1[0]-planes2[0];
 	Mat theta(angle.size(), CV_32FC2, Scalar::all(0));
-
+	// calculate real part&imag part of phase-diff
 	int Height = theta.rows;
 	int Width = theta.cols;
 	if (angle.isContinuous() && theta.isContinuous())
@@ -44,7 +50,9 @@ Point phaseCorr(const Mat& src1, const Mat& src2)
 			pfan++;
 		}
 	}
+	// idft of phase-diff
 	dft(theta, theta, DFT_INVERSE+DFT_SCALE);
+	// extract max-value's position&return
 	split(theta, planes1);
 	double minval, maxval;
 	Point minloc, maxloc;
@@ -132,7 +140,7 @@ bool imrotate(const Mat& img, Mat &Res, float angle)
 void fftShift(InputOutputArray _out)
 {
 	Mat out = _out.getMat();
-
+	// out is a number, return
 	if(out.rows == 1 && out.cols == 1)
 	{
 		// trivially shifted.
@@ -141,12 +149,12 @@ void fftShift(InputOutputArray _out)
 
 	std::vector<Mat> planes;
 	split(out, planes);
-
+	// get matrix's center
 	int xMid = out.cols >> 1;
 	int yMid = out.rows >> 1;
 
 	bool is_1d = xMid == 0 || yMid == 0;
-
+	// if matrix is vector, row or column equals 1
 	if(is_1d)
 	{
 		xMid = xMid + yMid;
@@ -740,141 +748,16 @@ void FMTmatchDemo()
 	waitKey(0);
 //	getchar();
 	return;
-
-/*	double Tstart = getTickCount();
-	double tmcon = 0, tmcnt = 0;
-
-	int h1 = img1.rows; int w1 = img1.cols;
-	int h2 = img2.rows; int w2 = img2.cols;
-
-	// convert to FFT, and shift to zero frequency
-	int opHeight = getOptimalDFTSize(h1);
-	int opWidth = getOptimalDFTSize(w1);
-	Mat src1(opHeight, opWidth, CV_8U, Scalar::all(0));
-	Mat tem1(opHeight, opWidth, CV_8U, Scalar::all(0));
-	Mat roi1;
-	if (opHeight == h1&&opWidth == w1)
-		src1 = img1.clone();
-	else
-	{
-		roi1 = src1(Rect(0, 0, w1, h1));
-		img1.copyTo(roi1);
-	}
-	roi1 = tem1(Rect(0, 0, w2, h2));
-	img2.copyTo(roi1);
-	//		copyMakeBorder(img1, src1, 0, opHeight-h1, 0, opWidth-w1, BORDER_CONSTANT, Scalar::all(0));
-	//	copyMakeBorder(img2, tem1, 0, opHeight-h2, 0, opWidth-w2, BORDER_CONSTANT, Scalar::all(0));
-	Mat fftsrc = fft2(src1, h1);
-	Mat ffttem = fft2(tem1, h2);
-
-	tmcon = (getTickCount() - Tstart)/getTickFrequency()*1000;
-	cout << ++tmcnt << ":" << tmcon << endl;
-	// extract magnitude and shift to center
-	Mat magsrc, magtem;
-	Mat planes[2];
-	//	std::vector<Mat> planes;
-	split(fftsrc, planes);
-	magnitude(planes[0], planes[1], magsrc);
-	split(ffttem, planes);
-	magnitude(planes[0], planes[1], magtem);
-	fftShift(magsrc);
-	fftShift(magtem);
-	tmcon = (getTickCount() - Tstart)/getTickFrequency()*1000;
-	cout << ++tmcnt << ":" << tmcon << endl;
-	// high-pass filter
-	Mat H = highpass_filter(opHeight, opWidth);
-	Mat Hsrc = H.mul(magsrc);
-	Mat Htem = H.mul(magtem);
-	tmcon = (getTickCount() - Tstart)/getTickFrequency()*1000;
-	cout << ++tmcnt << ":" << tmcon << endl;
-
-	// transform to Log-Polar space, m=70? why?
-	Mat Lsrc(Hsrc.size(), CV_32F, Scalar::all(0)), Ltem(Htem.size(), CV_32F, Scalar::all(0));
-	LogPolarTrans(Hsrc, Lsrc, Point(opHeight/2, opWidth/2), INTER_NEAREST);
-	LogPolarTrans(Htem, Ltem, Point(opHeight/2, opWidth/2), INTER_NEAREST);
-
-	tmcon = (getTickCount() - Tstart)/getTickFrequency()*1000;
-	cout << ++tmcnt << ":" << tmcon << endl;
-	// phase correlation
-	Point2d offset = phaseCorrelate(Lsrc, Ltem);
-	float theta = (offset.x)*360/Ltem.cols;
-	//	float theta = 65;
-
-	tmcon = (getTickCount() - Tstart)/getTickFrequency()*1000;
-	cout << ++tmcnt << ":" << tmcon << endl;
-	// eliminate 180 ambiguity
-	Mat Rimg, Rimg180;
-	imrotate(img2, Rimg,theta);
-	imrotate(img2, Rimg180, theta+180);
-
-	tmcon = (getTickCount() - Tstart)/getTickFrequency()*1000;
-	cout << ++tmcnt << ":" << tmcon << endl;
-
-	Rimg.convertTo(Rimg, CV_32F);
-	Rimg180.convertTo(Rimg180, CV_32F);
-	double maxval,maxval180;
-	Point maxloc, maxloc180;
-	img1.convertTo(src1, CV_32F);
-	getphaseCorrMaxval_loc(Rimg, src1, maxval, maxloc);
-	getphaseCorrMaxval_loc(Rimg180, src1, maxval180, maxloc180);
-	Mat Rotatedimg;
-	if (maxval < maxval180)
-	{
-		Rotatedimg = Rimg180;
-		offset = Point2f(maxloc180);
-		if (theta < 180)
-			theta = theta + 180;
-		else
-			theta = theta - 180;
-	}
-	else
-	{
-		Rotatedimg = Rimg;
-		offset = Point2f(maxloc);
-	}
-
-	double duration = (getTickCount() - Tstart)/getTickFrequency()*1000;
-
-//	Mat transM = (Mat_<float>(3, 3) << 1, 0, offset.x, 0, 1, offset.y, 0, 0, 1);
-//	Mat imgsw;
-	warpPerspective(Rotatedimg, imgsw, transM, Rotatedimg.size());
-	//	imshow("src", img1);
-	//	imshow("tem", tem1);
-	imgsw.convertTo(imgsw, CV_8U);
-	imshow("registered", imgsw/2+img1/2);
-	// 	Rotatedimg.convertTo(Rotatedimg,CV_8U);
-	// 	imshow("Rotated", Rotatedimg);
-	cout << "offset: " << offset << endl;
-	cout << "theta:" << theta << endl;
-	imwrite("registered.bmp", imgsw/2+img1/2);
-
-	//	namedWindow("1", 0);
-	//	imshow("1", dst);
-	cout << "Time Consuming: " << duration << "ms" << endl;
-	waitKey(0);
-	//	getchar();
-	return;*/
 }
 
 cv::Mat FastHazeRemoval(const Mat& src, float rho1, int windowssize /*= 101*/ )
 {
 	Mat Img_Src = src.clone();
 	Mat Img_Process = SpitMinChn(Img_Src);  // 分离出最小通道，6ms
-
-//	double tStart = cv::getTickCount();
-
 	// 均值滤波 -- 耗时较长，3ms
 	Size sz(windowssize,windowssize);
 	Mat AvgMinChn;
-//	Mat kenerl(sz, CV_32F, Scalar(1));
-//	filter2D(Img_Process, AvgMinChn, CV_32F, kenerl/sz.area());
-// 	Mat img;
-// 	Img_Process.convertTo(img, CV_32F);
-// 	blur(img, AvgMinChn, sz);
 	boxFilter(Img_Process, AvgMinChn, CV_32FC1, sz);
-
-//	cout << (getTickCount() - tStart)*1000/getTickFrequency() << "msl" << endl;
-
 	// 求所有元素均值--不需要优化，ms以下
 	Scalar Avg = mean(Img_Process)/255;
 	// 求
@@ -889,8 +772,6 @@ cv::Mat FastHazeRemoval(const Mat& src, float rho1, int windowssize /*= 101*/ )
 	minMaxLoc(AvgMinChn, &minTmp, &maxAvg);
 	float invA = 2/(maxSrc + maxAvg);
 	Mat Table = CreatTable(invA);
-
-	//    CreatUCharTable(invA);
 	if (Img_Src.channels() == 1)
 	{
 		Mat res;
@@ -918,15 +799,11 @@ cv::Mat SpitMinChn(const Mat& src )
 	Mat img(src.size(),CV_8UC1);
 	/**/
 	int end = src.rows * src.cols;
-	//    int Width = src.cols;
 	uchar *uptrsrc = src.data;
 	uchar *uptrimg = img.data;
 	uchar R,G,B;
 	for(int i = 0; i < end; i++)
 	{
-		//	uptrsrc = src.ptr<uchar>(i);
-		//	uptrimg = img.ptr<uchar>(i);
-		//	for (int j = 0; j < Width; j++)
 		{
 			B = *uptrsrc++;
 			G = *uptrsrc++;
@@ -934,10 +811,6 @@ cv::Mat SpitMinChn(const Mat& src )
 			*uptrimg++ = R<G?(R<B?R:B):(G<B?G:B);
 		}
 	}
-	/*   vector<Mat> planes;
-	split(src,planes);
-	cv::min(planes[0],planes[1],img);
-	cv::min(planes[2],img,img);*/ 
 	return img;
 }
 
@@ -1076,15 +949,6 @@ void ShapeAngleCircles(Mat src, vector<vector<Point>>& circles, double threshold
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
 	findContours( edges, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE, Point( 0, 0) );
-// 	Mat imgshow(image.size(), CV_8U, Scalar(0));
-// 	cvtColor(imgshow, imgshow, CV_GRAY2BGR);
-// 	for (int i = 0; i < contours.size(); i++)
-// 	{
-// 		Scalar color( rand() &255, rand() &255, rand() &255 );
-// 		drawContours(imgshow, contours, i, color, 1);
-// 		imshow("1", imgshow);
-// 		waitKey(0);
-// 	}
 	int i,j;
 	for (i = 0; i < contours.size(); i++)
 	{
@@ -1113,7 +977,6 @@ void ShapeAngleCircles(Mat src, vector<vector<Point>>& circles, double threshold
 				}
 			}
 			D_alpha = D_alpha / contours[i].size();
-			cout << "D_alpha" << D_alpha << endl;
 			if (abs(D_alpha)<threshold || abs(D_alpha-CV_PI)<threshold)
 			{
 				circles.push_back(contours[i]);
@@ -1186,11 +1049,6 @@ void ShapeAngleCirclesDemo()
 
 void DrawLabelImage(const Mat& _labelImg, Mat& _colorLabelImg)
 {
-// 	if (_labelImg.empty() ||
-// 		_labelImg.type() != CV_32SC1)
-// 	{
-// 		return ;
-// 	}
 	Mat img;
 	_labelImg.convertTo(img, CV_8U);
 	RNG rng( 12345);
@@ -1311,7 +1169,6 @@ void Add2Features(FEATURES &feature1, const Run_length &runlength, int width, in
 	case REGION_SELECT_AREA:
 		feature1.nPixelCnt += runlength.E-runlength.S+1;
 		break;
-		// new runlength is at the bottom of connected component
 	case REGION_SELECT_HEIGHT:
 		feature1.top=min(feature1.top, int(runlength.S/width));
 		feature1.bottom=max(feature1.bottom, int(runlength.S/width));
@@ -1402,22 +1259,8 @@ long StatFeatureInfo(InputOutputArray _src, vector<FEATURES> &Features, int type
 		else
 			Features[k].label = Features[findRootIndex(Features, Features[k].label)].label;
 	}
-	//code for test
-// 	 	for (int i = 1; i < l; i++)
-// 	 	{
-// 	 		if (Features[i].label == i)
-// 	 		{
-// 	 			cout << i << " ";
-// 	 			cout << Features[i].label;
-// 	 			cout << " ";
-// 				cout << Features[i].nPixelCnt << endl;
-// 	 			cout << Features[i].right - Features[i].left+1 << endl;
-// 				cout << Features[i].bottom - Features[i].top+1 << endl;
-// 	 		}
-// 	 	}
-	//不回填时，label存放的就是各连通分支的标号
-	//回填到图像，使每个像素得到其标号值
-	//	long runCount = n;
+	// 不回填时，label存放的就是各连通分支的标号
+	// 回填到图像，使每个像素得到其标号值
 	if(backfill)
 	{
 		uchar *image = src.data;
