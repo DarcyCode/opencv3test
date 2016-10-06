@@ -2673,8 +2673,8 @@ void CCLabelingDemo()
 	uchar *pimg = img1.ptr<uchar>(0);
 	vector<long> Start, End, label, index;
 	long cnt;
-	cnt = CCLabeling(pimg, img1.cols, img.rows, true);
-//	CCLabeling(img1, Start, End, label, index, cnt);
+//	cnt = CCLabeling(pimg, img1.cols, img.rows, true);
+	CCLabeling(img1, Start, End, label, index, cnt);
 	t = cv::getTickCount() - t;
 	cout << t*1000/getTickFrequency() << "ms" << endl;
 	cout << cnt << endl;
@@ -2964,4 +2964,22 @@ void SelectShapeDemo()
 	imshow("before", bw*255);
 	imshow("after", (img));
 	waitKey(0);
+}
+
+void floodfilltest()
+{
+	Mat img = imread("d:/images/test1.tif",0);
+	double t = cv::getTickCount();
+	int cnt = 0;
+	for (int i = 0; i < img.rows; i++)
+		for (int j = 0; j < img.cols; j++)
+			if (img.ptr<uchar>(i)[j]==255)
+				cv::floodFill(img, Point(j,i),++cnt);
+//	cv::floodFill(img, Point(2,20), 128);
+	t = cv::getTickCount() - t;
+	cout << t*1000/cv::getTickFrequency() << "ms" << endl;
+	Mat imgsw;
+	DrawLabelImage(img, imgsw);
+	imshow("1", imgsw);
+	waitKey();
 }

@@ -13,11 +13,12 @@ RNG rng( 12345);
 int main()
 {
 //	ConnComponetLabelDemo();
-//	CCLabelingDemo();
+	CCLabelingDemo();
 //	SelectRegionDemo();
 //	FMTmatchDemo();
 //	FastHazeRemovalDemo();
 //	CylinderExpansionTest();
 //	StatFeatureInfoDemo();
-	SelectShapeDemo();
+//	SelectShapeDemo();
+//	floodfilltest();
 }

@@ -285,3 +285,7 @@ void SelectShape(InputArray _src, OutputArray _dst, vector<Mat> &Regions, int ty
 // demo
 void SelectRegionDemo();
 void SelectShapeDemo();
+
+// to test opencv in-built flood-fill method
+// CClabeling is faster than flood-fill using test1.tif
+void floodfilltest();
