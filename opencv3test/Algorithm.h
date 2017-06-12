@@ -98,6 +98,7 @@ void FastHazeRemovalDemo();
 //************************************
 void CylinderExpansion(InputArray _src, OutputArray _dst, int R);
 void CylinderExpansionNremap(InputArray _src, OutputArray _dst, int R);
+void CylinderExpansionNremap1(InputArray _src, OutputArray _dst, int R, int a, int b);
 void CylinderExpansionTest();
 
 //************************************

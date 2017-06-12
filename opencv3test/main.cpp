@@ -17,8 +17,8 @@ int main()
 //	SelectRegionDemo();
 //	FMTmatchDemo();
 //	FastHazeRemovalDemo();
-//	CylinderExpansionTest();
+	CylinderExpansionTest();
 //	StatFeatureInfoDemo();
-	SelectShapeDemo();
+//	SelectShapeDemo();
 //	floodfilltest();
 }
