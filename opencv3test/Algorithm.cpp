@@ -1219,6 +1219,7 @@ void CylinderExpansion(InputArray _src, OutputArray _dst, int R, int a, int b, f
 	// verify
 	Mat src = _src.getMat();
 	CV_Assert(src.depth() == CV_8UC1);
+	CV_Assert((a+b)>0);
 	// some important vars
 	//	R = src.cols/2;
 	R = src.cols/(2.*sin(Theta/2));
@@ -1247,22 +1248,41 @@ void CylinderExpansion(InputArray _src, OutputArray _dst, int R, int a, int b, f
 	int Height = map_y.rows;
 	Width = map_y.cols;
 	ptr = map_y.ptr<float>(0);
-	for(int i = 0; i < Height/2; i++)
+	int Middle;
+	if (a*b<0)
 	{
-		float delta = (1-2.*(i+1)/Height)*a;
-		for(int j = 0; j < Width/2; j++)
-			*ptr++ = i+(1-2.*(j+1)/Width)*delta;
-		for(int j = Width/2; j < Width; j++)
-			*ptr++ = i+(2.*(j+1)/Width-1)*delta;
+		for(int i = 0; i < Height; i++)
+		{
+			int tmp = a<0?-a:-b;
+			int sgn = a<0?-1:1;
+			float delta = 1.*(i+1)*(b+a)/Height+tmp;
+			for(int j = 0; j < Width/2; j++)
+				*ptr++ = i+sgn*(1-2.*(j+1)/Width)*delta;
+			for(int j = Width/2; j < Width; j++)
+				*ptr++ = i+sgn*(2.*(j+1)/Width-1)*delta;
+		}
 	}
-	for(int i = Height/2; i < Height; i++)
+	else
 	{
-		float delta = (2.*(i+1)/Height-1)*b;
-		for(int j = 0; j < Width/2; j++)
-			*ptr++ = i-((1.-2.*(j+1)/Width)*delta);
-		for(int j = Width/2; j < Width; j++)
-			*ptr++ = i-((2.*(j+1)/Width-1)*delta);
+		Middle = 1.*a*Height/(a+b);
+		for(int i = 0; i < Middle; i++)
+		{
+			float delta = (1-1.*(i+1)/Middle)*a;
+			for(int j = 0; j < Width/2; j++)
+				*ptr++ = i+(1-2.*(j+1)/Width)*delta;
+			for(int j = Width/2; j < Width; j++)
+				*ptr++ = i+(2.*(j+1)/Width-1)*delta;
+		}
+		for(int i = Middle; i < Height; i++)
+		{
+			float delta = 1.*(i+1-Middle)/(Height-Middle)*b;
+			for(int j = 0; j < Width/2; j++)
+				*ptr++ = i-((1.-2.*(j+1)/Width)*delta);
+			for(int j = Width/2; j < Width; j++)
+				*ptr++ = i-((2.*(j+1)/Width-1)*delta);
+		}
 	}
+	
 	// 	cout << mapx<<endl;
 	// 	cout << map_x<<endl;
 	// 	cout << map_y<<endl;
@@ -1382,10 +1402,10 @@ void CylinderExpansionNremap1(InputArray _src, OutputArray _dst, int R, int a, i
 
 void CylinderExpansionTest()
 {
-	Mat src = imread("D:/images/cylinderexpansion/1.jpg", 0);
+	Mat src = imread("D:/images/cylinderexpansion/biaoqian2.bmp", 0);
 	Mat dst;
 	double t = getTickCount();
-	CylinderExpansion(src, dst, src.cols/2,5,5,2./3*CV_PI);
+	CylinderExpansion(src, dst, src.cols/2,0,30,2.8/3*CV_PI);
 	t = (getTickCount()-t)/getTickFrequency()*1000;
 	cout << t << "ms" << endl;
 	imshow("1", src);
