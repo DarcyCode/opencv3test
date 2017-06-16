@@ -1216,6 +1216,7 @@ void CylinderExpansion(InputArray _src, OutputArray _dst, int R, int a, int b)
 
 void CylinderExpansion(InputArray _src, OutputArray _dst, int R, int a, int b, float Theta)
 {
+	
 	// verify
 	Mat src = _src.getMat();
 	CV_Assert(src.depth() == CV_8UC1);
@@ -1239,11 +1240,11 @@ void CylinderExpansion(InputArray _src, OutputArray _dst, int R, int a, int b, f
 	}
 	// if src.cols = 2*R+1;
 	ptr[Width/2+1] = src.cols/2+1;
-	Mat map_x(dst.size(), CV_32FC1);
-	for(int i = 0; i < map_x.rows; i++)
-	{
-		mapx.copyTo(map_x.row(i));
-	}
+// 	Mat map_x(dst.size(), CV_32FC1);
+// 	for(int i = 0; i < map_x.rows; i++)
+// 	{
+// 		mapx.copyTo(map_x.row(i));
+// 	}
 	Mat map_y(dst.size(), CV_32FC1);
 	int Height = map_y.rows;
 	Width = map_y.cols;
@@ -1287,12 +1288,39 @@ void CylinderExpansion(InputArray _src, OutputArray _dst, int R, int a, int b, f
 	// 	cout << map_x<<endl;
 	// 	cout << map_y<<endl;
 	// remap
-	//	double t = getTickCount();
-
-	remap(src, dst, map_x, map_y, INTER_LINEAR);
-
-	// 	t = (getTickCount()-t)/getTickFrequency()*1000;
-	// 	cout << t << "ms" << endl;
+	// double t = getTickCount();
+	// remap(src, dst, map_x, map_y, INTER_LINEAR);
+	// rewrite remap function
+	uchar *ptrsrc = src.data;
+	uchar *ptrdst = dst.data;
+	float *ptrmapx, *ptrmapy;
+	ptrmapx = mapx.ptr<float>(0);
+	int w = src.cols;
+	for(int i = 0; i < Height; i++)
+	{
+		ptrdst = dst.ptr<uchar>(i);
+		ptrmapy = map_y.ptr<float>(i);
+		for(int j = 0; j < Width; j++)
+		{
+			int x1, y1;
+			float w1, w2;
+			x1 = static_cast<int>(ptrmapx[j]);
+			y1 = static_cast<int>(ptrmapy[j]);
+			if (y1<0||y1>Height)
+				ptrdst[j]=0;
+			else
+			{
+				w1 = ptrmapx[j]-x1;
+				w2 = ptrmapy[j]-y1;
+				int baseloc = x1+y1*w;
+				ptrdst[j] = static_cast<uchar>(w1*w2*ptrsrc[baseloc+1+w]+(1.-w1)*w2*ptrsrc[baseloc+w]+w1*(1.-w2)*ptrsrc[baseloc+1]+(1.-w1)*(1.-w2)*ptrsrc[baseloc]);
+			}
+			
+			//ptrdst[j] = ptrsrc[int(ptrmapx[j]+int(ptrmapy[j])*w)];
+		}
+	}
+	// t = (getTickCount()-t)/getTickFrequency()*1000;
+	// cout << t << "ms" << endl;
 }
 
 void CylinderExpansionNremap(InputArray _src, OutputArray _dst, int R)
@@ -1405,8 +1433,9 @@ void CylinderExpansionTest()
 	Mat src = imread("D:/images/cylinderexpansion/biaoqian2.bmp", 0);
 	Mat dst;
 	double t = getTickCount();
-	CylinderExpansion(src, dst, src.cols/2,0,30,2.8/3*CV_PI);
-	t = (getTickCount()-t)/getTickFrequency()*1000;
+	for(int i = 0; i < 100; i++)
+		CylinderExpansion(src, dst, src.cols/2,-10,30,3./3*CV_PI);
+	t = (getTickCount()-t)/getTickFrequency()*10;
 	cout << t << "ms" << endl;
 	imshow("1", src);
 	imshow("dst", dst);
