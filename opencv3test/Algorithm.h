@@ -337,3 +337,20 @@ void SelectShape(InputArray _src, OutputArray _dst, vector<Mat> &Regions, int ty
 void DrawLabelImage(const Mat& _labelImg, Mat& _colorLabelImg);
 // demo
 void SelectShapeDemo();
+
+//************************************
+// Method:    CylinderExpansion
+// FullName:  CylinderExpansion
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: InputArray _src, must be 8-bit 1-channel image
+// Parameter: OutputArray _dst, same depth and type with src
+// Parameter: int R, cylinder
+// Parameter: int a, top offset of cylinder
+// Parameter: int b, bottom offset of cylinder
+// Parameter: float Theta, angle of image with cylinder
+//************************************
+void CylinderExpansion(InputArray _src, OutputArray _dst, int R, int a, int b, float Theta);
+// test
+void CylinderExpansionTest();

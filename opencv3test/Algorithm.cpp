@@ -1440,3 +1440,143 @@ void SelectShapeDemo()
 	imshow("after", (img));
 	waitKey(0);
 }
+
+void CylinderExpansion(InputArray _src, OutputArray _dst, int R, int a, int b, float Theta)
+{
+	
+	// verify
+	Mat src = _src.getMat();
+	CV_Assert(src.depth() == CV_8UC1);
+	CV_Assert((a+b)>0);
+	// some important vars
+	//	R = src.cols/2;
+	R = src.cols/(2.*sin(Theta/2));
+	int Width = Theta*R;
+	// create dst
+	_dst.create(src.rows, Width, CV_8U);
+	Mat dst = _dst.getMat();
+	// establish mapping
+	float theta = 0.;
+	Mat mapx(1, Width, CV_32FC1, Scalar(0));
+	float *ptr = mapx.ptr<float>(0);
+	for (int i = 1; i <= Width/2; i++)
+	{
+		theta = 1.*(i+1)/R+(CV_PI-Theta)/2;
+		ptr[i] = R*(sin(Theta/2)-cos(theta));
+		ptr[Width-1-i] = src.cols-ptr[i];
+	}
+	ptr[Width/2+1] = src.cols/2+1;
+	Mat map_y(dst.size(), CV_32FC1);
+	int Height = map_y.rows;
+	Width = map_y.cols;
+	ptr = map_y.ptr<float>(0);
+	int Middle;
+	if (a*b<0)
+	{
+		for(int i = 0; i < Height; i++)
+		{
+			int tmp = a<0?-a:-b;
+			int sgn = a<0?-1:1;
+			float delta = 1.*(i+1)*(b+a)/Height+tmp;
+			for(int j = 0; j <= Width/2; j++)
+			{
+				ptr[j] = i+sgn*(1-2.*(j+1)/Width)*delta;
+				ptr[Width-j-1] = ptr[j];
+			}
+			ptr[Width/2+1]=0;
+			ptr += Width;
+		}
+	}
+	else
+	{
+		Middle = 1.*a*Height/(a+b);
+		for(int i = 0; i < Middle; i++)
+		{
+			float delta = (1-1.*(i+1)/Middle)*a;
+			for(int j = 0; j <= Width/2; j++)
+			{
+				ptr[j] = i+(1-2.*(j+1)/Width)*delta;
+				ptr[Width-j-1] = ptr[j];
+			}
+			ptr[Width/2+1]=0;
+			ptr += Width;
+		}
+		for(int i = Middle; i < Height; i++)
+		{
+			float delta = 1.*(i+1-Middle)/(Height-Middle)*b;
+			for(int j = 0; j <= Width/2; j++)
+			{
+				ptr[j] = i-(1-2.*(j+1)/Width)*delta;
+				ptr[Width-j-1] = ptr[j];
+			}
+			ptr[Width/2+1]=0;
+			ptr += Width;
+		}
+	}
+	uchar *ptrsrc = src.data;
+	uchar *ptrdst = dst.data;
+	float *ptrmapx, *ptrmapy;
+	ptrmapx = mapx.ptr<float>(0);
+	int w = src.cols;
+
+	for(int i = 0; i <= Width/2; i++)
+	{
+		ptrdst = dst.ptr<uchar>(0);
+		ptrmapy = map_y.ptr<float>(0);
+		int x1 = static_cast<int>(ptrmapx[i]);
+		float w1 = ptrmapx[i]-x1;
+		for(int j = 0; j < Height; j++)
+		{
+			int y1;
+			float w2;
+			y1 = static_cast<int>(ptrmapy[i]);
+			if (y1<0||y1>Height)
+			{
+				ptrdst[i]=0;
+				ptrdst[Width-i-1]=0;
+			}
+			else
+			{
+				w2 = ptrmapy[i]-y1;
+				int baseloc = x1+y1*w;
+				ptrdst[i] = static_cast<uchar>(w1*w2*ptrsrc[baseloc+1+w]+(1.-w1)*w2*ptrsrc[baseloc+w]+w1*(1.-w2)*ptrsrc[baseloc+1]+(1.-w1)*(1.-w2)*ptrsrc[baseloc]);
+				baseloc = w-1-x1+y1*w;
+				ptrdst[Width-i-1] = static_cast<uchar>(w1*w2*ptrsrc[baseloc+w-1]+(1.-w1)*w2*ptrsrc[baseloc+w]+w1*(1.-w2)*ptrsrc[baseloc-1]+(1.-w1)*(1.-w2)*ptrsrc[baseloc]);
+			}
+			//if (j < Height-1)
+			{
+ 				ptrdst += Width;
+				ptrmapy += Width;
+			}
+		}
+	}
+	src.col(src.cols/2+1).copyTo(dst.col(Width/2+1));
+}
+
+void CylinderExpansionTest()
+{
+	Mat src = imread("D:/images/cylinderexpansion/biaoqian2.bmp", 0);
+	Mat dst;
+	double t = getTickCount();
+	for(int i = 0; i < 1000; i++)
+		CylinderExpansion(src, dst, src.cols/2,-10,30,2.8/3*CV_PI);
+	t = (getTickCount()-t)/getTickFrequency()*1;
+	cout << t << "ms" << endl;
+	imshow("1", src);
+	imshow("dst", dst);
+	waitKey(0);
+/*	Mat src(1,250,CV_8U,Scalar(0));
+	uchar *ptr = src.data;
+	for (int i = 0; i < src.cols; i++)
+	{
+		ptr[i] = i;
+	}
+	cout << src << endl;
+	Mat dst;
+	double t = getTickCount();
+	CylinderExpansionNremap(src, dst, src.cols/2);
+	t = (getTickCount()-t)/getTickFrequency()*1000;
+	cout << dst << endl;
+	cout << t << "ms" << endl;
+*/
+}
