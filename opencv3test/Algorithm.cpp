@@ -1613,6 +1613,7 @@ void removeBackground(Mat src, Mat& res, int ksize /*= 15*/, bool IsAbs /*= fals
 {
 	CV_Assert(src.depth() == CV_8U);
 	res = src.clone();
+	// GaussianBlur(res, res, Size(ksize,ksize), 1);
 	medianBlur(res, res, ksize);
 	if (IsAbs)
 	{
@@ -1639,11 +1640,34 @@ void removeBackground(Mat src, Mat& res, int ksize /*= 15*/, bool IsAbs /*= fals
 	}
 }
 
+void removeBackgrounddemo()
+{
+	Mat img = imread("d:/images/removeback.jpg", 0);
+	Mat res(img.size(), CV_8U, Scalar(0));
+	removeBackground(img, res,15);
+	imshow("img", img);
+	imshow("res", res);
+	waitKey(0);
+}
+
+void removeBackgroundtest()
+{
+	Mat img = imread("d:/images/removeback.jpg", 0);
+	Mat res(img.size(), CV_8U, Scalar(0));
+	res = Get1ChannelMasks(img, 170,220);
+	imshow("img", img);
+	imshow("res", res);
+	waitKey(0);
+}
+
+
+
 void ShapeAngleCircles(Mat src, vector<vector<Point>>& circles, double threshold /*= 0.2*/, int threLength /*= 500*/, int thresCanny/* = 200*/)
 {
 	circles.clear();
 	Mat image;
 	GaussianBlur(src, image,Size(9,9),2,2);
+	// blur(src,image,Size(9,9));
 	Mat dx(image.size(),CV_32F);
 	Mat dy(image.size(),CV_32F);
 	// calculate gradient of image
@@ -1651,12 +1675,13 @@ void ShapeAngleCircles(Mat src, vector<vector<Point>>& circles, double threshold
 	Sobel(image,dy,CV_32F,0,1,3);
 	// detecte edges by canny
 	Mat edges;
+	// Canny(src, edges, 50,thresCanny);
 	Canny(src, edges, 50,thresCanny);
 	imshow("1",edges);
 	waitKey(0);
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
-	findContours( edges, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE, Point( 0, 0) );
+	findContours( edges, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point( 0, 0) );
 // 	Mat imgshow(image.size(), CV_8U, Scalar(0));
 // 	cvtColor(imgshow, imgshow, CV_GRAY2BGR);
 // 	for (int i = 0; i < contours.size(); i++)
@@ -1694,10 +1719,11 @@ void ShapeAngleCircles(Mat src, vector<vector<Point>>& circles, double threshold
 				}
 			}
 			D_alpha = D_alpha / contours[i].size();
-			cout << "D_alpha" << D_alpha << endl;
+//			cout << "D_alpha " << D_alpha << endl;
 			if (abs(D_alpha)<threshold || abs(D_alpha-CV_PI)<threshold)
 			{
 				circles.push_back(contours[i]);
+				cout << "D_alpha1 " << D_alpha << endl;
 			}
 		}
 	}
@@ -1736,30 +1762,37 @@ void ShapeAngleCirclesDemo()
 	/************************************************************************/
 	/*                   test of detect circles by shape angle              */
 	/************************************************************************/
-	Mat image = imread("D:/images/samples/pic1.bmp",0);
+	Mat image = imread("D:/images/samples/1.jpg",0);
 	vector<vector<Point>> circles;
-	int th = 200;
+	int th = 300;
 	double t = getTickCount();
 	//	while(cin>>th)
 	{
-		ShapeAngleCircles(image, circles,3,th);
-		Mat imgshow(image.size(), CV_8U, Scalar(0));
-		cvtColor(imgshow, imgshow, CV_GRAY2BGR);
-		for (int i = 0; i < circles.size(); i++) 
-		{
-			Scalar color( rand() &255, rand() &255, rand() &255 );
-			drawContours(imgshow, circles, i, color, 3);
-		}
-		// 	vector<Point> centers;
-		// 	vector<int> radius;
-		// 	CalCirclePara(circles, centers, radius);
-		// 	for (int i = 0; i < centers.size(); i++)
-		// 		cout << "center: " << centers[i] << " radius: " << radius[i] << endl;
-
+		ShapeAngleCircles(image, circles,0.1,th,200);
 		t = (getTickCount()-t)/getTickFrequency()*1000;
 		cout << t << "ms" << endl;
+		Mat imgshow(image.size(), CV_8U, Scalar(0));
+		cvtColor(imgshow, imgshow, CV_GRAY2BGR);
+// 		for (int i = 0; i < circles.size(); i++) 
+// 		{
+// 			Scalar color( rand() &255, rand() &255, rand() &255 );
+// 			drawContours(imgshow, circles, i, color, 3);
+// 		}
+
+		vector<Point> centers;
+		vector<int> radius;
+		CalCirclePara(circles, centers, radius);
+ 		
+		for (int i = 0; i < centers.size(); i++)
+		{
+			cv::circle(image,centers[i],radius[i],Scalar(0,150,150),3);
+			cv::circle(image,centers[i],2,Scalar(0,255,255),3);
+			cout << "center: " << centers[i] << " radius: " << radius[i] << endl;
+		}
 		cvtColor(image,image,CV_GRAY2BGR);
-		imshow("2", imgshow+image/2);
+		//imshow("2", imgshow+image/2);
+		 imshow("2", image);
+		//imwrite("d:/images/samples/result3.png", image);
 		waitKey(0);
 	}
 	return;
@@ -3259,4 +3292,70 @@ void floodfilltest()
 	DrawLabelImage(img, imgsw);
 	imshow("1", imgsw);
 	waitKey();
+}
+
+int candp(int a,int b,int c)
+{
+	int r=1;
+	b=b+1;
+	while(b!=1)
+	{
+		r=r*a;
+		r=r%c;
+		b--;
+	}
+	return r;
+}
+
+bool IsMutualPrime(int x,int y)
+{
+	int t;
+	while(y)
+	{
+		t=x;
+		x=y;
+		y=t%y;
+	}
+	if(x == 1)
+		return true;                          //x与y互素时返回true
+	else
+		return false;                          //x与y不互素时返回false
+}
+
+int cald(int p,int q, int e)
+{
+	int n,t,d;
+	n=p*q;
+	t=(p-1)*(q-1);                              //求n的欧拉数
+	d = 1;
+	while(((e * d) % t) != 1)
+	{
+		d++;                  //由公钥e求出私钥d
+	}
+	return d;
+}
+
+void EncryptMachineCode(vector<int> mcode, int n, int e,vector<int> &proclaimedtext)
+{
+	int m_t = 0;
+	for(int i = 0; i < mcode.size(); i++)
+	{
+		m_t = mcode[i];
+		proclaimedtext.push_back(candp(m_t,e,n));
+	}
+	//proclaimedtext.push_back(candp(m,e,n));
+	for(int i = 0; i < proclaimedtext.size(); i++)
+		cout << proclaimedtext[i] << " ";
+}
+
+void DecryptMachineCode(vector<int> proclaimedtext, int n, int d, vector<int> &mcode)
+{
+	int m_t = 0;
+	for(int i = 0; i < proclaimedtext.size(); i++)
+	{
+		m_t = proclaimedtext[i];
+		mcode.push_back(candp(m_t,d,n));
+	}
+	for(int i = 0; i < mcode.size(); i++)
+		cout << mcode[i] << " ";
 }

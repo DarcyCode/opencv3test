@@ -128,6 +128,8 @@ Mat generateMask(int radius);
 // Parameter: bool IsAbs
 //************************************
 void removeBackground(Mat src, Mat& res, int ksize = 15, bool IsAbs = false);
+void removeBackgrounddemo();
+void removeBackgroundtest();
 
 //************************************
 // Method:    通过形状角检测图像中的圆
@@ -292,3 +294,13 @@ void SelectShapeDemo();
 // to test opencv in-built flood-fill method
 // CClabeling is faster than flood-fill using test1.tif
 void floodfilltest();
+
+// RSA 加密算法简单实现
+#define rsaP 43
+#define rsaQ 59
+#define rsaE 13
+int candp(int a,int b,int c);      // 数据处理函数，实现幂的取余运算,result = a^b%c
+bool IsMutualPrime(int x,int y);   // 公钥e与t的互素判断
+int cald(int p,int q, int e);	   // 根据p、q和公钥e计算密钥d
+void EncryptMachineCode(vector<int> mcode, int n, int e, vector<int> &proclaimedtext); // m为密文，n=p*q，两个数一组进行加密，避免大数
+void DecryptMachineCode(vector<int> proclaimedtext, int n, int d, vector<int> &mcode); // pro明文，n=p*q,d密钥
