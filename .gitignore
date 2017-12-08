@@ -7,3 +7,5 @@ opencv3test.*
 *.yml
 opencv3test/codeforread.cpp
 opencv3test/main1.cpp
+opencv3test/rsaen_de_test_code.zip
+opencv3test/rsaencryption.cpp

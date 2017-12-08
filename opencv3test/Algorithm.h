@@ -294,13 +294,30 @@ void SelectShapeDemo();
 // to test opencv in-built flood-fill method
 // CClabeling is faster than flood-fill using test1.tif
 void floodfilltest();
-
+/*
 // RSA 加密算法简单实现
-#define rsaP 43
-#define rsaQ 59
-#define rsaE 13
+// 明文=18位机器码+2位天数，4个一组，分5组
+// 密文为15位大写字母，3个一组，分5组
+#define rsaP 67
+#define rsaQ 211
+#define rsaE 37 // d=1873    13*6397 
+#define VECTOR_SIZE 5 // 18位机器码+2位天数限制，4个数字一组，共5组
+#define M_CODE_LEN 20
+#define REG_CODE_LEN 15
 int candp(int a,int b,int c);      // 数据处理函数，实现幂的取余运算,result = a^b%c
 bool IsMutualPrime(int x,int y);   // 公钥e与t的互素判断
-int cald(int p,int q, int e);	   // 根据p、q和公钥e计算密钥d
+int ex_gcd(int e, int phin);	   // 扩展欧几里得算法，根据(p-1)*(q-1)和公钥e计算密钥d
 void EncryptMachineCode(vector<int> mcode, int n, int e, vector<int> &proclaimedtext); // m为密文，n=p*q，两个数一组进行加密，避免大数
 void DecryptMachineCode(vector<int> proclaimedtext, int n, int d, vector<int> &mcode); // pro明文，n=p*q,d密钥
+void EnDeMcodetest();
+bool mcodestr2arr(string machinecode, int arr[VECTOR_SIZE]);						   // 机器码+天数转为5维向量,正确返回true
+string arr2mcodestr(int arr[VECTOR_SIZE]);											   // 5位向量转机器码+天数
+void arrmcodetest();
+string num2al3(int a);																   // 数字转3位字符
+int al32num(string s);																   // 3位字符转数字
+bool regstr2arr(string regcode,int arr[VECTOR_SIZE]);								   // 注册码转5维向量
+string arr2regstr(int arr[VECTOR_SIZE]);											   // 5维向量转注册码
+void arrregcodetest();
+string EncryptMachineCode(string machinecode, int n, int e);
+string DecryptMachineCode(string regstr, int n, int d);
+void EnDeMcodetest1();*/

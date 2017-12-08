@@ -3293,18 +3293,19 @@ void floodfilltest()
 	imshow("1", imgsw);
 	waitKey();
 }
-
-int candp(int a,int b,int c)
+/*
+int candp(int a,int b,int n)
 {
-	int r=1;
-	b=b+1;
-	while(b!=1)
-	{
-		r=r*a;
-		r=r%c;
-		b--;
-	}
-	return r;
+	int ret=1;     
+	int tmp=a;     
+	while(b)     
+	{     
+		//基数存在     
+		if(b&0x1) ret=ret*tmp%n;     
+		tmp=tmp*tmp%n;     
+		b>>=1;     
+	}     
+	return ret;
 }
 
 bool IsMutualPrime(int x,int y)
@@ -3322,18 +3323,28 @@ bool IsMutualPrime(int x,int y)
 		return false;                          //x与y不互素时返回false
 }
 
-int cald(int p,int q, int e)
+
+int ex_gcd(int e, int phin)
 {
-	int n,t,d;
-	n=p*q;
-	t=(p-1)*(q-1);                              //求n的欧拉数
-	d = 1;
-	while(((e * d) % t) != 1)
-	{
-		d++;                  //由公钥e求出私钥d
-	}
-	return d;
+	int a = phin, b = e, t1 = 0, t2 = 1;  
+
+	while(b != 0)  
+	{  
+		int t = a;  
+		a = b;  
+		int q = t / b;  
+		b = t % b;  
+
+		t = t1 - q * t2;  
+		t1 = t2;  
+		t2 = t;  
+	}  
+
+	if(t1 < 0)  //扩展欧几里得算法得到的结果可能为负数，所以需要把它“掰正”  
+		t1 += phin;  
+	return t1;
 }
+
 
 void EncryptMachineCode(vector<int> mcode, int n, int e,vector<int> &proclaimedtext)
 {
@@ -3346,6 +3357,7 @@ void EncryptMachineCode(vector<int> mcode, int n, int e,vector<int> &proclaimedt
 	//proclaimedtext.push_back(candp(m,e,n));
 	for(int i = 0; i < proclaimedtext.size(); i++)
 		cout << proclaimedtext[i] << " ";
+	cout << endl;
 }
 
 void DecryptMachineCode(vector<int> proclaimedtext, int n, int d, vector<int> &mcode)
@@ -3358,4 +3370,161 @@ void DecryptMachineCode(vector<int> proclaimedtext, int n, int d, vector<int> &m
 	}
 	for(int i = 0; i < mcode.size(); i++)
 		cout << mcode[i] << " ";
+	cout << endl;
 }
+
+void EnDeMcodetest()
+{
+	int n = rsaP*rsaQ;
+	int m = (rsaP-1)*(rsaQ-1);
+	int e = rsaE;
+
+	int d = ex_gcd(e, m);
+	//	cout<<d<<endl;
+	vector<int> p;
+	vector<int> tmp;
+	int code1[] = {1234,5678,6789};
+	vector<int> mcode(code1,code1+3);
+	EncryptMachineCode(mcode,n,e,tmp);
+	DecryptMachineCode(tmp,n,d,p);
+	string s("true");
+	for(int i = 0; i < mcode.size(); i++)
+		if(mcode[i] != p[i])
+		{
+			s="false";
+			break;
+		}
+		cout << s << endl;
+}
+
+std::string EncryptMachineCode(string machinecode, int n, int e)
+{
+	int mcode[VECTOR_SIZE]={0,0,0,0,0};
+	int tmparr[VECTOR_SIZE]={0,0,0,0,0};
+	mcodestr2arr(machinecode, mcode);
+	for(int i = 0; i < VECTOR_SIZE; i++)
+		tmparr[i] = candp(mcode[i],e,n);
+	return arr2regstr(tmparr);
+}
+
+
+
+std::string DecryptMachineCode(string regstr, int n, int d)
+{
+	int regarr[VECTOR_SIZE]={0,0,0,0,0};
+	int tmparr[VECTOR_SIZE]={0,0,0,0,0};
+	regstr2arr(regstr, regarr);
+	for(int i = 0; i < VECTOR_SIZE; i++)
+		tmparr[i] = candp(regarr[i],d,n);
+	return arr2mcodestr(tmparr);
+}
+
+void EnDeMcodetest1()
+{
+	int n = rsaP*rsaQ;
+	int m = (rsaP-1)*(rsaQ-1);
+	int e = rsaE;
+	int d = ex_gcd(e, m);
+
+	string mcode = "12345678901234567890";
+	string regstr("");
+	string res("");
+	regstr = EncryptMachineCode(mcode, n, e);
+	res = DecryptMachineCode(regstr,n,d);
+	cout << mcode << "\n" << regstr << "\n" << res << endl;
+
+}
+
+bool mcodestr2arr(string machinecode, int arr[VECTOR_SIZE])
+{
+	// 判断是否全为数字，长度20
+	if (machinecode.size()!=M_CODE_LEN)
+		return false;
+	for (string::size_type i=0; i < machinecode.size(); i++)
+		if(isdigit(machinecode[i])==0)
+			return false;
+	for (int i =0; i < VECTOR_SIZE; i++)
+	{
+		arr[i] = stoi(machinecode.substr(i*4,4));
+	}
+	return true;
+}
+
+string arr2mcodestr(int arr[VECTOR_SIZE])
+{
+	string machinecode="";
+	string buling="0000";
+	for(int i = 0; i < VECTOR_SIZE; i++)
+	{
+		stringstream ss;
+		ss << arr[i];
+		int t = ss.str().size();
+		machinecode += buling.substr(0,4-t)+ss.str();
+	}
+	return machinecode;
+}
+
+void arrmcodetest()
+{
+	int arr[VECTOR_SIZE]={0,0,0,0,0};
+	string code("12345678901234567890");
+	mcodestr2arr(code, arr);
+	for (int i =0; i < VECTOR_SIZE; i++)
+		cout << arr[i] << " ";
+	string s = arr2mcodestr(arr);
+	if(s==code)
+		cout << "right" << endl;
+	else
+		cout << "false" << endl;
+}
+
+std::string num2al3(int a)
+{
+	string s="";
+	string alLUT("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+	s += alLUT[a/676];
+	s += alLUT[(a%676)/26];
+	s += alLUT[a%26];
+	return s;
+}
+
+int al32num(string s)
+{
+	int res = 0;
+	string alLUT("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+	res = alLUT.find(s[0])*676+alLUT.find(s[1])*26+alLUT.find(s[2]);
+	return res;
+}
+
+bool regstr2arr(string regcode,int arr[VECTOR_SIZE])
+{
+	if (regcode.size() != REG_CODE_LEN)
+		return false;
+	for(int i = 0; i < VECTOR_SIZE; i++)
+		arr[i] = al32num(regcode.substr(i*3,3));
+	return true;
+}
+
+std::string arr2regstr(int arr[VECTOR_SIZE])
+{
+	string s("");
+	for (int i = 0; i < VECTOR_SIZE; i++)
+		s += num2al3(arr[i]);
+	return s;
+}
+
+void arrregcodetest()
+{
+	string regcode("ABCDEFGHIJKLMNO");
+	int arr[VECTOR_SIZE]={0,0,0,0,0};
+	string res;
+	regstr2arr(regcode, arr);
+	res = arr2regstr(arr);
+	for (int i = 0; i < VECTOR_SIZE; i++)
+		cout<<arr[i]<<" ";
+	cout << "\n";
+	cout << regcode << endl;
+	cout << res << endl;
+}
+
+*/
