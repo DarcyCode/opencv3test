@@ -10,3 +10,5 @@ opencv3test/main1.cpp
 opencv3test/rsaen_de_test_code.zip
 opencv3test/rsadecryption.cpp
 opencv3test/rsaencryption.cpp
+opencv3test/rsadecryption.h
+opencv3test/rsaencryption.h
