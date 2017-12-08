@@ -298,9 +298,7 @@ void floodfilltest();
 // RSA 加密算法简单实现
 // 明文=18位机器码+2位天数，4个一组，分5组
 // 密文为15位大写字母，3个一组，分5组
-#define rsaP 67
-#define rsaQ 211
-#define rsaE 37 // d=1873    13*6397 
+
 #define VECTOR_SIZE 5 // 18位机器码+2位天数限制，4个数字一组，共5组
 #define M_CODE_LEN 20
 #define REG_CODE_LEN 15
